@@ -240,6 +240,17 @@ def test_cloud_random_exception(mock_client, caplog, mock_cloud):
 
 
 @asyncio.coroutine
+def test_cloud_receive_timeout(mock_client, mock_cloud):
+    """Test random exception."""
+    conn = iot.CloudIoT(mock_cloud)
+    mock_client.receive.side_effect = asyncio.TimeoutError
+
+    yield from conn.connect()
+
+    assert len(mock_client.ping.mock_calls) == 1
+
+
+@asyncio.coroutine
 def test_refresh_token_before_expiration_fails(hass, mock_cloud):
     """Test that we don't connect if token is expired."""
     mock_cloud.subscription_expired = True

@@ -3,6 +3,7 @@ import asyncio
 import logging
 
 from aiohttp import hdrs, client_exceptions, WSMsgType
+import async_timeout
 
 from homeassistant.const import EVENT_HOMEASSISTANT_STOP
 from homeassistant.components.alexa import smart_home
@@ -18,7 +19,7 @@ _LOGGER = logging.getLogger(__name__)
 STATE_CONNECTING = 'connecting'
 STATE_CONNECTED = 'connected'
 STATE_DISCONNECTED = 'disconnected'
-
+RECEIVE_TIMEOUT = 60
 
 class UnknownHandler(Exception):
     """Exception raised when trying to handle unknown handler."""
@@ -88,7 +89,13 @@ class CloudIoT:
             self.state = STATE_CONNECTED
 
             while not client.closed:
-                msg = yield from client.receive()
+                try:
+                    with async_timeout.timeout(RECEIVE_TIMEOUT,
+                                               loop=hass.loop):
+                        msg = yield from client.receive()
+                except asyncio.TimeoutError:
+                    client.ping()
+                    continue
 
                 if msg.type in (WSMsgType.ERROR, WSMsgType.CLOSED,
                                 WSMsgType.CLOSING):
